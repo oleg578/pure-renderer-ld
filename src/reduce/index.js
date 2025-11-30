@@ -1,5 +1,5 @@
-import {JSDOM} from "jsdom";
-import {logger} from "../services/logger.js";
+import { JSDOM } from "jsdom";
+import { logger } from "../services/logger.js";
 
 const MULTISPACE_REGEX = /\s{2,}/g;
 const NBSP_REGEX = /(?:\u00a0|&nbsp;)/g;
@@ -15,6 +15,12 @@ const ALLOWED_ATTRIBUTES = new Set([
   "href",
   "src",
   "alt",
+  "itemscope",
+  "itemtype",
+  "itemprop",
+  "itemid",
+  "itemref",
+  "value",
 ]);
 const CLASS_KEYWORDS = [
   "article",
@@ -59,7 +65,7 @@ class HtmlCleaner {
     }
 
     const dom = new JSDOM(trimmed);
-    const {document} = dom.window;
+    const { document } = dom.window;
 
     if (document) {
       logger.info("Remove comments");
