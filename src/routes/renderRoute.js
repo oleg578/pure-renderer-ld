@@ -6,11 +6,11 @@ import {ProcessTracker} from "../utils/processTracker.js";
 export const createRenderRouter = (pageRenderer, processTracker) => {
   const router = Router();
 
-  router.post(
+  router.get(
     "/render",
     async (req, res, next) => {
       try {
-        const url = normalizeHttpUrl(req.body?.url);
+        const url = normalizeHttpUrl(req.query?.url);
         const html = await processTracker.track(() => pageRenderer.render(url));
         res.type("text/html").status(200).send(html);
       } catch (error) {

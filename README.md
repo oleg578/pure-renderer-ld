@@ -17,7 +17,7 @@ Lightweight headless renderer that turns any HTTP(S) page into a cleaned, SEO-fr
 
 ## How It Works
 
-1. `POST /render` accepts a `url` (URL-encoded form field). The URL is validated to HTTP/HTTPS.
+1. `GET /render?url=...` accepts a `url` query parameter. The URL is validated to HTTP/HTTPS.
 2. `ProcessTracker` marks work as in-flight (`tmp/process`), allowing `GET /progress` to reflect busy/idle state.
 3. `PageRenderer` launches headless Chromium, blocks non-essential requests, disables animations, waits for DOM stability, and grabs the full HTML via the Chrome DevTools Protocol.
 4. The HTML is cleaned: scripts/styles/forms/nav/svg/etc. are stripped, only safe attributes remain, meaningless wrapper divs are collapsed, whitespace is normalized, and canonical/base tags are ensured.
@@ -71,9 +71,7 @@ Set via `.env` (see `.env.example` for defaults):
 ### Render and clean a page
 
 ```bash
-curl -X POST http://127.0.0.1:51000/render \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  --data-urlencode "url=https://example.com/products/1"
+curl "http://127.0.0.1:51000/render?url=https://example.com/products/1"
 ```
 
 Returns `text/html` with stripped noise and injected JSON-LD.
@@ -116,4 +114,4 @@ To enable verbose Puppeteer request traces, include `log` in `LOG_LEVEL`.
 
 ## Notes
 
-- Request bodies are URL-encoded (`express.urlencoded`); send `Content-Type: application/x-www-form-urlencoded` in clients.
+- The render endpoint is a GET with a `url` query parameter; no request body is required.
