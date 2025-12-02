@@ -27,6 +27,12 @@ export class PageRenderer {
     try {
       const page = await browser.newPage();
 
+      const customUserAgent = process.env.USER_AGENT?.trim();
+      if (customUserAgent) {
+        logger.info(`Applying custom USER_AGENT`);
+        await page.setUserAgent({ userAgent: customUserAgent });
+      }
+
       await page.setRequestInterception(true);
       page.on('request', request => {
         logger.log(`Request ${request.url()}: ${request.resourceType()}`);
