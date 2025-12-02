@@ -1,6 +1,9 @@
 # PureRenderer-LD
 
-Lightweight headless rendering service that turns any HTTP(S) page into a cleaned, SEO-friendly HTML snapshot. It drives headless Chromium via Puppeteer, strips noise, injects JSON-LD metadata, and exposes a tiny HTTP API for downstream pipelines.
+Lightweight self-hosted headless renderer for SEO snapshots with auto JSON-LD.
+Positioning: Alternative to prerender.io / Rendertron.
+
+Lightweight headless renderer that turns any HTTP(S) page into a cleaned, SEO-friendly HTML snapshot. It drives headless Chromium via Puppeteer, strips noise, injects JSON-LD metadata, and exposes a tiny HTTP API for downstream pipelines.
 
 ## Highlights
 
