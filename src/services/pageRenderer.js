@@ -217,7 +217,8 @@ export class PageRenderer {
       return "page";
     }
 
-    const rawBase = `${parsedUrl.hostname}${parsedUrl.pathname}` || "page";
+    const pathPart = parsedUrl.pathname?.replace(/\//g, "-") ?? "";
+    const rawBase = `${parsedUrl.hostname}${pathPart}` || "page";
     const sanitized = rawBase
       .replace(/[^a-z0-9]+/gi, "_")
       .replace(/^_+|_+$/g, "")
