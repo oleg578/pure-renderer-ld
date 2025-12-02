@@ -1,117 +1,52 @@
 # PureRenderer-LD
 
-Lightweight self-hosted headless renderer for SEO snapshots with auto JSON-LD.
-Positioning: Alternative to prerender.io / Rendertron.
+Lean, self-hosted HTML renderer that turns any HTTP(S) page into a cleaned SEO snapshot with injected JSON-LD. Built on Puppeteer and Express as a drop-in alternative to prerender.io / Rendertron.
 
-Lightweight headless renderer that turns any HTTP(S) page into a cleaned, SEO-friendly HTML snapshot. It drives headless Chromium via Puppeteer, strips noise, injects JSON-LD metadata, and exposes a tiny HTTP API for downstream pipelines.
+## What It Does
+- **GET /render?url=…** returns minimized HTML with JSON-LD; errors come back as `{ "error": "…" }`.
+- Filters non-essential requests (fonts, stylesheets, media, xhr/ws/ping, common analytics/AB scripts) for repeatable renders.
+- Waits for DOM stability via `MutationObserver`, then pulls markup directly with CDP `DOM.getOuterHTML` to avoid Puppeteer timing quirks.
+- Cleans markup: strips scripts/styles/forms/nav/svg/etc., keeps only safe attributes, collapses empty div soup, normalizes whitespace, and enforces `<base>` + canonical link.
+- Builds a JSON-LD graph (Organization, WebSite, derived WebPage type) from existing meta tags and canonical URLs.
+- Tracks in-flight work in a file-backed flag (`tmp/process`) surfaced at **GET /progress**.
+- Supports a custom **USER_AGENT** for pages that gate content; sanitizes snapshot filenames when snapshotting is wired in.
 
-## Highlights
+## Quick Start
+- Prereq: Node.js **>= 18.18** (Puppeteer downloads Chromium on first install).
+- Install: `npm install`
+- Configure: `cp .env.example .env` then tweak values (see below).
+- Run: `npm start` (or `npm run dev` for watch mode, `npm run check` for syntax, `npm test` for node's built-in tests if added).
 
-- Headless fetch with aggressive request filtering to drop fonts, stylesheets, media, and common analytics for faster, repeatable snapshots (`src/services/pageRenderer.js`).
-- DOM stability detection before snapshotting using a `MutationObserver`, followed by a direct CDP `DOM.getOuterHTML` pull to avoid Puppeteer timing quirks.
-- HTML reduction pipeline that removes unsafe tags/attributes, collapses empty wrappers, enforces canonical/base tags, and normalizes whitespace for easy parsing (`src/reduce/index.js`).
-- Auto-generated JSON-LD graph (Organization, WebSite, and a heuristically derived page type) built from existing meta tags and canonical URLs (`src/ldgen/jsonLdBuilder.js`).
-- File-backed progress flag exposed via `GET /progress`, useful for coordinating orchestration steps (`src/utils/processTracker.js`).
-- File-based logging with configurable levels and locations (`src/services/logger.js`).
-- Snapshot helper ready for wiring when `SNAPSHOT=true` to persist raw/clean HTML to disk for debugging.
+## Environment
+Defined in `.env` (defaults from `.env.example`):
+- `SERVER_HOST` / `SERVER_PORT` — bind address and port (default `127.0.0.1:51000`).
+- `SERVER_TIMEOUT_MS` — overall request timeout; also used as max DOM-stability wait (default `60000`).
+- `FETCH_HTML_TIMEOUT` — CDP outerHTML fetch timeout in ms (default `1000`).
+- `STABLE_PAGE_TIMEOUT` — quiet period (ms) with no DOM mutations before snapshot (default `500`).
+- `TMP_DIR` — progress flag directory (default `./tmp`).
+- `LOG_DIR`, `LOG_FILE`, `LOG_LEVEL` — log destination and enabled levels (`log`, `info`, `warn`, `error`; inline `//` comments are ignored).
+- `USER_AGENT` — optional custom UA applied to page requests; omit to use Puppeteer's default.
+- `SNAPSHOT` — toggles snapshot helper if you wire `PageRenderer.persistHtmlSnapshot` into the flow; filenames are URL-safe and truncated to 120 chars.
 
-## How It Works
+## API
+- **GET /render?url=ENCODED_HTTP_URL** → `text/html`
+  - Validates the `url` is HTTP/HTTPS. Returns cleaned HTML with injected JSON-LD.
+  - Failures return HTTP 4xx/5xx with JSON body `{ "error": "message" }`.
+- **GET /progress** → `{ "progress": 0 | 1 }`
+  - Reflects whether a render is running (file-backed flag reset even on errors).
 
-1. `GET /render?url=...` accepts a `url` query parameter. The URL is validated to HTTP/HTTPS.
-2. `ProcessTracker` marks work as in-flight (`tmp/process`), allowing `GET /progress` to reflect busy/idle state.
-3. `PageRenderer` launches headless Chromium, blocks non-essential requests, disables animations, waits for DOM stability, and grabs the full HTML via the Chrome DevTools Protocol.
-4. The HTML is cleaned: scripts/styles/forms/nav/svg/etc. are stripped, only safe attributes remain, meaningless wrapper divs are collapsed, whitespace is normalized, and canonical/base tags are ensured.
-5. JSON-LD is generated from page metadata and injected into `<head>` before returning the final HTML.
-6. The progress flag resets to idle even on errors; HTTP errors are normalized to JSON responses.
+## Rendering Pipeline
+- Launch headless Chromium with `--no-sandbox` and intercept requests to drop heavy/analytics resources.
+- Await DOM stability (`MutationObserver` + quiet timer) within the global timeout, then pull the full document via CDP.
+- Clean HTML (`src/reduce/index.js`): remove disallowed tags/attrs, keep meaningful classes, drop non-description meta tags, ensure `<base>` and canonical, collapse empty wrappers, normalize whitespace and nbsp.
+- Generate JSON-LD (`src/ldgen/jsonLdBuilder.js`): Organization + WebSite + heuristically typed WebPage (ItemPage, CollectionPage, SearchResultsPage, etc.) based on existing meta and path heuristics; injects into `<head>`.
 
-## Getting Started
+## Logging & Debugging
+- Logger (`src/services/logger.js`) writes `[ISO][LEVEL]` entries to `LOG_DIR/LOG_FILE`; falls back to console on write failures.
+- Include `log` in `LOG_LEVEL` to trace every intercepted request.
+- Snapshot helper (`PageRenderer.persistHtmlSnapshot`) is available for wiring when `SNAPSHOT=true`; filenames are sanitized from hostname/path and saved under `LOG_DIR`.
 
-Prerequisites: Node.js >= 18.18 (Puppeteer will download Chromium on first install).
-
-### Install dependencies
-
-```bash
-npm install
-```
-
-### Configure environment
-
-Copy defaults and adjust as needed:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-```bash
-cp .env.example .env
-```
-
-### Run the server
-
-```bash
-npm start            # production
-npm run dev          # reload on change
-npm run check        # syntax check
-```
-
-## Configuration
-
-Set via `.env` (see `.env.example` for defaults):
-
-- `SERVER_HOST` / `SERVER_PORT` – bind address and port (default `127.0.0.1:51000`).
-- `SERVER_TIMEOUT_MS` – overall request timeout (default `60000` ms).
-- `FETCH_HTML_TIMEOUT` – timeout for the CDP HTML fetch step (default `1000` ms).
-- `STABLE_PAGE_TIMEOUT` – required idle period with no DOM mutations before snapshotting (default `500` ms).
-- `TMP_DIR` – location for the progress flag file (default `./tmp`).
-- `LOG_DIR`, `LOG_FILE`, `LOG_LEVEL` – log destination and enabled levels (`log, info, warn, error`).
-- `SNAPSHOT` – when true, enables the HTML snapshot helper (wire `persistHtmlSnapshot` where desired).
-
-## API Usage
-
-### Render and clean a page
-
-```bash
-curl "http://127.0.0.1:51000/render?url=https://example.com/products/1"
-```
-
-Returns `text/html` with stripped noise and injected JSON-LD.
-
-### Check render progress
-
-```bash
-curl http://127.0.0.1:51000/progress
-```
-
-Returns `{"progress":0}` when idle or `{"progress":1}` while a render is running.
-
-## Testing
-
-- Unit tests (jsdom, built-in test runner): `npm test`
-- Static syntax check for `src/server.js`: `npm run check`
-
-## Logging
-
-The service uses a file-based logger (`src/services/logger.js`) that writes timestamped entries to disk:
-
-- **Location**: Configured via `LOG_DIR` and `LOG_FILE` environment variables
-- **Levels**: `log`, `info`, `warn`, `error` (filter via `LOG_LEVEL`)
-- **Format**: `[ISO timestamp] [LEVEL] message`
-- **Behavior**:
-  - Automatically creates log directory if missing
-  - Appends to log file (doesn't rotate)
-  - Silently falls back to console on write failures
-  - Uses `util.formatWithOptions` for structured output
-
-**Example configuration**:
-
-```env
-LOG_DIR=./log
-LOG_FILE=app.log
-LOG_LEVEL=info,warn,error
-```
-
-To enable verbose Puppeteer request traces, include `log` in `LOG_LEVEL`.
-
-## Notes
-
-- The render endpoint is a GET with a `url` query parameter; no request body is required.
+## Development
+- Entrypoint: `src/server.js`, Express app in `src/app.js`, routes in `src/routes/renderRoute.js`.
+- Progress tracking: `src/utils/processTracker.js` (file `tmp/process`).
+- Node ESM; lint via `npm run check`; tests via `npm test` when present.
