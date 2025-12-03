@@ -27,6 +27,7 @@ Defined in `.env` (defaults from `.env.example`):
 - `LOG_DIR`, `LOG_FILE`, `LOG_LEVEL` — log destination and enabled levels (`log`, `info`, `warn`, `error`; inline `//` comments are ignored).
 - `USER_AGENT` — optional custom UA applied to page requests; omit to use Puppeteer's default.
 - `SNAPSHOT` — toggles snapshot helper if you wire `PageRenderer.persistHtmlSnapshot` into the flow; filenames are URL-safe and truncated to 120 chars.
+- `STRIP_CSS` — when `true`, remove `<link rel="stylesheet">` and `<style>` during cleaning; when `false`, keep them.
 
 ## API
 - **GET /render?url=ENCODED_HTTP_URL** → `text/html`
@@ -38,7 +39,9 @@ Defined in `.env` (defaults from `.env.example`):
 ## Rendering Pipeline
 - Launch headless Chromium with `--no-sandbox` and intercept requests to drop heavy/analytics resources.
 - Await DOM stability (`MutationObserver` + quiet timer) within the global timeout, then pull the full document via CDP.
-- Clean HTML (`src/reduce/index.js`): remove disallowed tags/attrs, keep meaningful classes, drop non-description meta tags, ensure `<base>` and canonical, collapse empty wrappers, normalize whitespace and nbsp.
+- Clean HTML (`src/reduce/index.js`): optionally strip CSS tags when `STRIP_CSS=true`, remove disallowed tags/attrs, keep
+meaningful classes, drop non-description meta tags, ensure `<base>` and canonical, collapse empty wrappers, normalize whitespace and
+nbsp.
 - Generate JSON-LD (`src/ldgen/jsonLdBuilder.js`): Organization + WebSite + heuristically typed WebPage (ItemPage, CollectionPage, SearchResultsPage, etc.) based on existing meta and path heuristics; injects into `<head>`.
 
 ## Logging & Debugging
