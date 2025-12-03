@@ -6,7 +6,7 @@ const NBSP_REGEX = /(?:\u00a0|&nbsp;)/g;
 const ELEMENT_NODE = 1;
 const TEXT_NODE = 3;
 const COMMENT_NODE = 8;
-const STRIP_SELECTOR = "script, style, path, form, link, noscript, header, footer, nav, svg";
+const STRIP_SELECTOR = "script, path, form, link:not([rel=\"stylesheet\"]), noscript, header, footer, nav, svg";
 const ALLOWED_ATTRIBUTES = new Set([
     "class",
     "data-gseo",
@@ -51,6 +51,7 @@ const VOID_ELEMENTS = new Set([
     "wbr",
 ]);
 const VOID_ELEMENTS_SELECTOR = Array.from(VOID_ELEMENTS).join(",");
+const STRIP_CSS = String(process.env.STRIP_CSS ?? "").toLowerCase() === "true";
 
 class HtmlCleaner {
     clean(documentHtml, parsedURL) {
@@ -68,6 +69,10 @@ class HtmlCleaner {
             logger.info("Remove comments");
             this.removeComments(document);
             if (document.body) {
+                if (STRIP_CSS) {
+                    logger.info("Strip CSS tags (STRIP_CSS=true)");
+                    this.stripCssTags(document);
+                }
                 logger.info("Strip disallowed tags");
                 this.stripDisallowedTags(document);
                 logger.info("Remove disallowed attributes from body");
@@ -92,9 +97,14 @@ class HtmlCleaner {
     }
 
     stripDisallowedTags(document) {
-        document
-            .querySelectorAll(STRIP_SELECTOR)
+        document.querySelectorAll(STRIP_SELECTOR)
             .forEach((element) => element.remove());
+    }
+
+    stripCssTags(document) {
+        document.querySelectorAll('link[rel="stylesheet"], style')
+            .forEach((element) => element.remove());
+
     }
 
     removeNonDescriptionMeta(document) {
