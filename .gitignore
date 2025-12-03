@@ -8,3 +8,5 @@ dist/
 misc/
 log/
 *.ai
+*.swp
+.*.swp
