@@ -26,6 +26,8 @@ export class PageRenderer {
 
     try {
       const page = await browser.newPage();
+      const parsedUrl = this.parseUrl(url);
+      const timestamp = this.buildTimestampSuffix(new Date());
 
       const customUserAgent = process.env.USER_AGENT?.trim();
       if (customUserAgent) {
@@ -78,11 +80,17 @@ export class PageRenderer {
         throw new Error(`Failed to get content for ${url}: ${error.message}`);
       });
 
-      logger.info(`Got content from: ${url}`);
-      const parsedUrl = this.parseUrl(url);
+      if (isSnapshotEnabled) {
+        await this.persistHtmlSnapshot(content, parsedUrl, timestamp+"raw");
+      }
 
+      logger.info(`Got content from: ${url}`);
       const cleanedContent = await cleanHTML(content, parsedUrl);
       const htmlWithJsonLd = await this.injectJsonLd(cleanedContent);
+
+      if (isSnapshotEnabled) {
+        await this.persistHtmlSnapshot(htmlWithJsonLd, parsedUrl, timestamp + "cleaned");
+      }
 
       return htmlWithJsonLd;
     } finally {
@@ -212,10 +220,20 @@ export class PageRenderer {
       await fs.writeFile(filePath, html, "utf-8");
     } catch (error) {
       // Logging failure should not break rendering flow.
-      // eslint-disable-next-line no-console
       console.error(`Failed to write HTML snapshot to ${filePath}`, error);
     }
     logger.log(`Finished writing HTML snapshot to ${filePath}`);
+  }
+
+  buildTimestampSuffix(now) {
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    const seconds = String(now.getSeconds()).padStart(2, "0");
+
+    return `${year}-${month}-${day}-${hours}-${minutes}-${seconds}`;
   }
 
   buildSnapshotBaseName(parsedUrl) {
