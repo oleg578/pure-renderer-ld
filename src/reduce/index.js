@@ -6,7 +6,7 @@ const NBSP_REGEX = /(?:\u00a0|&nbsp;)/g;
 const ELEMENT_NODE = 1;
 const TEXT_NODE = 3;
 const COMMENT_NODE = 8;
-const STRIP_SELECTOR = "script, path, form, link:not([rel=\"stylesheet\"]), noscript, header, footer, nav, svg";
+const STRIP_SELECTOR = "iframe, script, path, form, link:not([rel=\"stylesheet\"]), noscript, header, footer, nav, svg";
 const ALLOWED_ATTRIBUTES = new Set([
     "class",
     "data-gseo",
