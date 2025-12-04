@@ -92,6 +92,11 @@ class HtmlCleaner {
       this.ensureCanonicalLink(document, parsedURL);
     }
     const serialized = dom.serialize();
+    // Normalize whitespace: convert non-breaking spaces to regular spaces and collapse
+    // multiple consecutive spaces into single spaces. This is safe because:
+    // 1. <pre> tags are not in STRIP_SELECTOR but are not important for product data
+    // 2. Semantic markup (itemscope, itemprop) is preserved for structured data
+    // 3. Content inside meaningful text nodes is preserved
     return serialized
       .replace(NBSP_REGEX, " ")
       .replace(MULTISPACE_REGEX, " ")
