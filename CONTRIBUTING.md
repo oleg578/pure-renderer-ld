@@ -1,7 +1,6 @@
 # Contributing Rules
 
 ## 1. General
-- Use TypeScript in strict mode.
 - Prefer simple, modular, and maintainable code.
 - Keep dependencies minimal; choose native APIs when possible.
 
