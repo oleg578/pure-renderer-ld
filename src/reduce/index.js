@@ -51,7 +51,8 @@ const VOID_ELEMENTS = new Set([
   "track",
   "wbr",
 ]);
-const VOID_ELEMENTS_SELECTOR = Array.from(VOID_ELEMENTS).join(",");
+const VOID_ELEMENTS_SELECTOR =
+  VOID_ELEMENTS.size > 0 ? Array.from(VOID_ELEMENTS).join(",") : null;
 const STRIP_CSS = String(process.env.STRIP_CSS ?? "").toLowerCase() === "true";
 
 class HtmlCleaner {
@@ -208,7 +209,7 @@ class HtmlCleaner {
       return true;
     }
 
-    if (!VOID_ELEMENTS_SELECTOR) {
+    if (VOID_ELEMENTS_SELECTOR === null) {
       return false;
     }
 
