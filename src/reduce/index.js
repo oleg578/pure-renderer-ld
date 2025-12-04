@@ -191,6 +191,8 @@ class HtmlCleaner {
       return;
     }
 
+    // Safe from circular references because we iterate through DOM tree structure
+    // which is guaranteed to be acyclic by the DOM specification
     let child = node.firstChild;
     while (child) {
       const next = child.nextSibling;
@@ -222,6 +224,8 @@ class HtmlCleaner {
   }
 
   collapseDivSoup(element) {
+    // Recursively process children first (bottom-up approach)
+    // Safe from circular references because DOM tree is acyclic
     Array.from(element.children).forEach((child) =>
       this.collapseDivSoup(child)
     );
@@ -280,6 +284,10 @@ class HtmlCleaner {
     if (!head) {
       head = document.createElement("head");
       const html = document.documentElement;
+      if (!html) {
+        return; // Malformed document, abort
+      }
+      // Insert head as first child of html element
       if (html.firstChild) {
         html.insertBefore(head, html.firstChild);
       } else {
