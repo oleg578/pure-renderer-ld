@@ -16,21 +16,12 @@ const PAGE_TYPES = [
 
 export class JsonLdBuilder {
   constructor() {
-    this.htmlEntityMap = {
-      "&amp;": "&",
-      "&lt;": "<",
-      "&gt;": ">",
-      "&quot;": '"',
-      "&#39;": "'",
-      "&apos;": "'",
-      "&nbsp;": " ",
-      "&#x27;": "'",
-      "&#8216;": "'",
-      "&#8217;": "'",
-      "&#8220;": '"',
-      "&#8221;": '"',
-      "&#8230;": "...",
-    };
+    // Use a temporary DOM element to decode HTML entities
+    // This handles all HTML entities including numeric ones (&#123;, &#x1F;)
+    this.textDecoder =
+      typeof document !== "undefined"
+        ? document
+        : new JSDOM("").window.document;
   }
 
   build(html, options = {}) {
@@ -264,10 +255,11 @@ export class JsonLdBuilder {
   }
 
   decodeHtmlEntities(value) {
-    return Object.entries(this.htmlEntityMap).reduce(
-      (acc, [entity, decoded]) => acc.split(entity).join(decoded),
-      value
-    );
+    // Use DOM textContent to decode all HTML entities (including numeric ones)
+    // This is more robust than manual mapping and handles all valid HTML entities
+    const textarea = this.textDecoder.createElement("textarea");
+    textarea.innerHTML = value;
+    return textarea.textContent || value;
   }
 
   createDom(html) {
