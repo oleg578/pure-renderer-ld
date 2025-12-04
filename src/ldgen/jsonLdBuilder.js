@@ -115,8 +115,16 @@ export class JsonLdBuilder {
   }
 
   derivePageType(metadata, override) {
-    if (override && PAGE_TYPES.includes(override)) {
-      return override;
+    if (override) {
+      if (PAGE_TYPES.includes(override)) {
+        return override;
+      }
+      // Log warning when invalid override is provided
+      console.warn(
+        `Invalid pageTypeOverride "${override}". Must be one of: ${PAGE_TYPES.join(
+          ", "
+        )}. Using heuristics instead.`
+      );
     }
 
     const ogType = metadata.ogType?.toLowerCase();
