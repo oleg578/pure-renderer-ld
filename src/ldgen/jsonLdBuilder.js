@@ -273,7 +273,15 @@ export class JsonLdBuilder {
   }
 
   createDom(html) {
-    return new JSDOM(html).window.document;
+    try {
+      return new JSDOM(html).window.document;
+    } catch (error) {
+      console.warn(
+        "Failed to parse HTML with JSDOM, returning empty document",
+        error.message
+      );
+      return new JSDOM("").window.document;
+    }
   }
 
   readAttribute(document, selector, attribute) {

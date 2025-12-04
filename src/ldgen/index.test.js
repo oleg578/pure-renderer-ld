@@ -296,3 +296,13 @@ test("prioritizes og: metadata over standard metadata when both present", () => 
     "longer OG description chosen"
   );
 });
+
+test("gracefully handles empty HTML string", () => {
+  const html = "";
+
+  const { graph } = parseGraph(html);
+  const page = findNode(graph, "WebPage");
+  assert.ok(page, "page created from empty HTML");
+  assert.equal(page.name, undefined, "no name from empty HTML");
+  assert.equal(page.inLanguage, "en", "language defaults to en");
+});
