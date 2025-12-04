@@ -131,15 +131,18 @@ export class JsonLdBuilder {
       }
     })();
 
+    // Path matchers determine page type from URL patterns
+    // Patterns are checked in order - first match wins
     const pathMatchers = [
       [/\/search/, "SearchResultsPage"],
-      [/faq/, "FAQPage"],
-      [/contact/, "ContactPage"],
-      [/about/, "AboutPage"],
+      [/\bfaq\b/, "FAQPage"],
+      [/\bcontact/, "ContactPage"],
+      [/\babout\b/, "AboutPage"],
       [/checkout|cart/, "CheckoutPage"],
-      [/(profile|account)/, "ProfilePage"],
+      [/(profile|account|user)/, "ProfilePage"],
       [/\/collections\//, "CollectionPage"],
       [/\/products?\//, "ItemPage"],
+      [/\bqa\b/, "QAPage"],
     ];
 
     const matched = pathMatchers.find(([pattern]) =>
