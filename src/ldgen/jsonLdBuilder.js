@@ -297,13 +297,12 @@ export class JsonLdBuilder {
   }
 
   pickLongest(values) {
-    let longest;
-    for (const value of values) {
+    return values.reduce((longest, value) => {
       if (value && (longest === undefined || value.length > longest.length)) {
-        longest = value;
+        return value;
       }
-    }
-    return longest;
+      return longest;
+    }, undefined);
   }
 }
 
