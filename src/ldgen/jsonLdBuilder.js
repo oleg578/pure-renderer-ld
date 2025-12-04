@@ -24,6 +24,13 @@ export class JsonLdBuilder {
         : new JSDOM("").window.document;
   }
 
+  /**
+   * Builds a JSON-LD Schema.org graph from HTML document
+   * @param {string} html - HTML document string to extract metadata from
+   * @param {Object} options - Configuration options
+   * @param {string} [options.pageTypeOverride] - Force a specific Schema.org page type (must be valid PAGE_TYPES value)
+   * @returns {string} JSON stringified Schema.org graph with Organization, WebSite, and Page entities
+   */
   build(html, options = {}) {
     const metadata = this.extractMetadata(html);
     const canonicalUrl = this.normalizeUrl(
@@ -307,6 +314,18 @@ export class JsonLdBuilder {
 }
 
 export const jsonLdBuilder = new JsonLdBuilder();
+
+/**
+ * Builds a JSON-LD Schema.org graph from HTML document
+ * @param {string} html - HTML document string to extract metadata from
+ * @param {Object} [options] - Configuration options
+ * @param {string} [options.pageTypeOverride] - Force a specific Schema.org page type
+ * @returns {string} JSON stringified Schema.org graph with metadata entities
+ * @example
+ * const html = '<html><title>My Page</title><meta name="description" content="..."></html>';
+ * const jsonLd = buildJsonLdScript(html, { pageTypeOverride: 'ItemPage' });
+ * const schema = JSON.parse(jsonLd);
+ */
 export const buildJsonLdScript = (html, options = {}) =>
   jsonLdBuilder.build(html, options);
 
