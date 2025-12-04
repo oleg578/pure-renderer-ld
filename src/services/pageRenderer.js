@@ -196,7 +196,7 @@ export class PageRenderer {
     }
     logger.log("Check log path for HTML snapshotting");
     const envPath = process.env.LOG_DIR?.trim();
-    const logDir = envPath && envPath !== "" ? envPath : "./log";
+    const logDir = envPath && envPath !== "" ? envPath : "./log/snapshots";
     const targetDir = path.isAbsolute(logDir)
       ? logDir
       : path.join(process.cwd(), logDir);
