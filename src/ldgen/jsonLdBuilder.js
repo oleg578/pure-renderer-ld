@@ -35,20 +35,35 @@ export class JsonLdBuilder {
 
   build(html, options = {}) {
     const metadata = this.extractMetadata(html);
-    const canonicalUrl = this.normalizeUrl(metadata.canonicalUrl, metadata.baseHref);
-    const metadataForType = {...metadata, canonicalUrl};
-    const pageType = this.derivePageType(metadataForType, options.pageTypeOverride);
+    const canonicalUrl = this.normalizeUrl(
+      metadata.canonicalUrl,
+      metadata.baseHref
+    );
+    const metadataForType = { ...metadata, canonicalUrl };
+    const pageType = this.derivePageType(
+      metadataForType,
+      options.pageTypeOverride
+    );
     const language = metadata.language ?? "en";
-    const pageName = metadata.title ?? metadata.ogTitle ?? metadata.ogSiteName ?? metadata.siteName;
+    const pageName =
+      metadata.title ??
+      metadata.ogTitle ??
+      metadata.ogSiteName ??
+      metadata.siteName;
     const description = this.pickLongest([
       metadata.description,
       metadata.ogDescription,
       metadata.twitterDescription,
     ]);
-    const siteName = metadata.ogSiteName ?? metadata.siteName ?? this.cleanName(metadata.title);
+    const siteName =
+      metadata.ogSiteName ??
+      metadata.siteName ??
+      this.cleanName(metadata.title);
     const websiteUrl = canonicalUrl ? new URL(canonicalUrl).origin : undefined;
 
-    const organizationId = websiteUrl ? `${websiteUrl}#organization` : undefined;
+    const organizationId = websiteUrl
+      ? `${websiteUrl}#organization`
+      : undefined;
     const websiteId = websiteUrl ? `${websiteUrl}#website` : undefined;
     const pageId = canonicalUrl ? `${canonicalUrl}#webpage` : undefined;
 
@@ -73,7 +88,7 @@ export class JsonLdBuilder {
           "@id": websiteId,
           url: websiteUrl,
           name: siteName,
-          publisher: organizationId ? {"@id": organizationId} : undefined,
+          publisher: organizationId ? { "@id": organizationId } : undefined,
           inLanguage: language,
           description,
         })
@@ -128,7 +143,9 @@ export class JsonLdBuilder {
       [/\/products?\//, "ItemPage"],
     ];
 
-    const matched = pathMatchers.find(([pattern]) => pattern.test(canonicalPath));
+    const matched = pathMatchers.find(([pattern]) =>
+      pattern.test(canonicalPath)
+    );
     return matched ? matched[1] : "WebPage";
   }
 
@@ -136,14 +153,46 @@ export class JsonLdBuilder {
     const document = this.createDom(html);
 
     const title = this.readTextContent(document, "title");
-    const description = this.readAttribute(document, 'meta[name="description"]', "content");
-    const ogTitle = this.readAttribute(document, 'meta[property="og:title"]', "content");
-    const ogDescription = this.readAttribute(document, 'meta[property="og:description"]', "content");
-    const ogSiteName = this.readAttribute(document, 'meta[property="og:site_name"]', "content");
-    const ogType = this.readAttribute(document, 'meta[property="og:type"]', "content");
-    const siteName = this.readAttribute(document, 'meta[name="application-name"]', "content");
-    const twitterDescription = this.readAttribute(document, 'meta[name="twitter:description"]', "content");
-    const canonicalUrl = this.readAttribute(document, 'link[rel="canonical"]', "href");
+    const description = this.readAttribute(
+      document,
+      'meta[name="description"]',
+      "content"
+    );
+    const ogTitle = this.readAttribute(
+      document,
+      'meta[property="og:title"]',
+      "content"
+    );
+    const ogDescription = this.readAttribute(
+      document,
+      'meta[property="og:description"]',
+      "content"
+    );
+    const ogSiteName = this.readAttribute(
+      document,
+      'meta[property="og:site_name"]',
+      "content"
+    );
+    const ogType = this.readAttribute(
+      document,
+      'meta[property="og:type"]',
+      "content"
+    );
+    const siteName = this.readAttribute(
+      document,
+      'meta[name="application-name"]',
+      "content"
+    );
+    const twitterDescription = this.readAttribute(
+      document,
+      'meta[name="twitter:description"]',
+      "content"
+    );
+    const canonicalUrl = this.readAttribute(
+      document,
+      'link[rel="canonical"]',
+      "href"
+    );
     const baseHref = this.readAttribute(document, "base[href]", "href");
     const language = document.documentElement.getAttribute("lang")?.trim();
 
@@ -178,20 +227,32 @@ export class JsonLdBuilder {
         const withProtocol = base
           ? sanitized
           : sanitized.startsWith("//")
-            ? `https:${sanitized}`
-            : sanitized;
+          ? `https:${sanitized}`
+          : sanitized;
 
-        const resolved = base ? new URL(sanitized, base) : new URL(withProtocol);
+        const resolved = base
+          ? new URL(sanitized, base)
+          : new URL(withProtocol);
         return allowedProtocols.has(resolved.protocol) ? resolved : undefined;
       } catch {
         return undefined;
       }
     };
 
+    // Only attempt to resolve candidate if baseHref is valid
     const baseUrl = baseHref ? toAbsoluteUrl(baseHref) : undefined;
-    const resolved = toAbsoluteUrl(candidate, baseUrl);
+    if (baseHref && !baseUrl) {
+      // Invalid base href, treat candidate as absolute URL
+      return this.normalizeUrl(candidate, undefined);
+    }
 
-    return resolved?.toString().replace(/\/$/, "");
+    const resolved = toAbsoluteUrl(candidate, baseUrl ?? undefined);
+
+    if (!resolved) {
+      return undefined;
+    }
+
+    return resolved.toString().replace(/\/$/, "");
   }
 
   decodeHtmlEntities(value) {
@@ -206,7 +267,10 @@ export class JsonLdBuilder {
   }
 
   readAttribute(document, selector, attribute) {
-    const value = document.querySelector(selector)?.getAttribute(attribute)?.trim();
+    const value = document
+      .querySelector(selector)
+      ?.getAttribute(attribute)
+      ?.trim();
     return value ? this.decodeHtmlEntities(value) : undefined;
   }
 
