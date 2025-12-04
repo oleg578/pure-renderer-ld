@@ -1,21 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {JSDOM} from "jsdom";
-import {cleanHTML} from "./index.js";
-import {logger} from "../services/logger.js";
+import { JSDOM } from "jsdom";
+import { cleanHTML } from "./index.js";
+import { logger } from "../services/logger.js";
 
 const noopAsync = async () => undefined;
 ["log", "info", "warn", "error", "write"].forEach((method) => {
   logger[method] = noopAsync;
 });
 
-const parseCleanedDocument = async (html, parsedUrl) => {
-  const cleaned = await cleanHTML(html, parsedUrl);
-  return {cleaned, document: new JSDOM(cleaned).window.document};
+const parseCleanedDocument = (html, parsedUrl) => {
+  const cleaned = cleanHTML(html, parsedUrl);
+  return { cleaned, document: new JSDOM(cleaned).window.document };
 };
 
 test("removes comments and disallowed tags while keeping description meta", async () => {
-  const {cleaned, document} = await parseCleanedDocument(
+  const { cleaned, document } = await parseCleanedDocument(
     `
       <!doctype html>
       <html>
@@ -36,12 +36,15 @@ test("removes comments and disallowed tags while keeping description meta", asyn
 
   assert.equal(document.querySelectorAll("script, style").length, 0);
   assert.equal(document.querySelectorAll("meta").length, 1);
-  assert.equal(document.querySelector("meta")?.getAttribute("name"), "description");
+  assert.equal(
+    document.querySelector("meta")?.getAttribute("name"),
+    "description"
+  );
   assert.ok(!cleaned.includes("<!-- noisy comment -->"));
 });
 
 test("removes disallowed attributes and filters class names to product keywords", async () => {
-  const {document} = await parseCleanedDocument(
+  const { document } = await parseCleanedDocument(
     `
       <html>
         <body>
@@ -68,7 +71,7 @@ test("removes disallowed attributes and filters class names to product keywords"
 });
 
 test("collapses div soup and removes empty wrappers", async () => {
-  const {document} = await parseCleanedDocument(
+  const { document } = await parseCleanedDocument(
     `
       <html>
         <body>
@@ -100,7 +103,7 @@ test("collapses div soup and removes empty wrappers", async () => {
 
 test("adds base and canonical tags when provided a URL", async () => {
   const parsedUrl = new URL("https://example.com/products/1?ref=ad");
-  const {document} = await parseCleanedDocument(
+  const { document } = await parseCleanedDocument(
     `
       <html>
         <head></head>
@@ -123,7 +126,7 @@ test("adds base and canonical tags when provided a URL", async () => {
 });
 
 test("does not add base or canonical when URL is missing", async () => {
-  const {document} = await parseCleanedDocument(
+  const { document } = await parseCleanedDocument(
     `
       <html>
         <body><p>Example</p></body>
@@ -136,7 +139,7 @@ test("does not add base or canonical when URL is missing", async () => {
 });
 
 test("normalizes non-breaking spaces and repeated whitespace inside text", async () => {
-  const {cleaned, document} = await parseCleanedDocument(
+  const { cleaned, document } = await parseCleanedDocument(
     `
       <html>
         <body>

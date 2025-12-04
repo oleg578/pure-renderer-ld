@@ -85,7 +85,7 @@ export class PageRenderer {
       }
 
       logger.info(`Got content from: ${url}`);
-      const cleanedContent = await cleanHTML(content, parsedUrl);
+      const cleanedContent = cleanHTML(content, parsedUrl);
       const htmlWithJsonLd = await this.injectJsonLd(cleanedContent);
 
       if (isSnapshotEnabled) {
