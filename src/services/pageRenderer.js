@@ -81,7 +81,7 @@ export class PageRenderer {
       });
 
       if (isSnapshotEnabled) {
-        await this.persistHtmlSnapshot(content, parsedUrl, timestamp+"raw");
+        await this.persistHtmlSnapshot(content, parsedUrl, timestamp+"_raw");
       }
 
       logger.info(`Got content from: ${url}`);
@@ -89,7 +89,7 @@ export class PageRenderer {
       const htmlWithJsonLd = await this.injectJsonLd(cleanedContent);
 
       if (isSnapshotEnabled) {
-        await this.persistHtmlSnapshot(htmlWithJsonLd, parsedUrl, timestamp + "cleaned");
+        await this.persistHtmlSnapshot(htmlWithJsonLd, parsedUrl, timestamp + "_cleaned");
       }
 
       return htmlWithJsonLd;
