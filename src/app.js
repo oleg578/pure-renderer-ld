@@ -25,7 +25,8 @@ export const createApp = ({pageRenderer, processTracker}) => {
       console.error(err);
     }
 
-    res.status(statusCode).json({error: message});
+    const clientMessage = statusCode >= 500 ? "Internal server error" : message;
+    res.status(statusCode).json({error: clientMessage});
   });
 
   return app;
