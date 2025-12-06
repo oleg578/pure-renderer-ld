@@ -16,6 +16,9 @@ export const createApp = ({pageRenderer, processTracker}) => {
 
   app.use(createRenderRouter(pageRenderer, processTracker));
 
+  // Ensure unknown routes return JSON instead of Express HTML 404 page
+  app.use((_req, res) => res.status(404).json({error: "Not found"}));
+
   app.use((err, _req, res, _next) => {
     const {statusCode, message} = normalizeError(err);
     if (statusCode >= 500) {
