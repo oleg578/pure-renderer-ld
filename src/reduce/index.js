@@ -64,7 +64,16 @@ class HtmlCleaner {
     if (trimmed === "") {
       return "";
     }
-    const dom = new JSDOM(trimmed);
+    // JSDOM spends most of the time parsing large inline stylesheets. When we
+    // know we'll strip CSS anyway (STRIP_CSS=true), remove them before
+    // constructing the DOM to keep processing fast and avoid timeouts.
+    const sanitized =
+      STRIP_CSS
+        ? trimmed
+            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+            .replace(/<link[^>]*rel=["']stylesheet["'][^>]*>/gi, "")
+        : trimmed;
+    const dom = new JSDOM(sanitized);
     const { document } = dom.window;
 
     if (document) {
