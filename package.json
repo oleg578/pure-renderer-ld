@@ -1,0 +1,26 @@
+{
+  "name": "page-render",
+  "version": "1.0.0",
+  "description": "Lightweight HTML render/cleanup server",
+  "scripts": {
+    "start": "node src/renderSrv.js",
+    "dev": "node --watch src/renderSrv.js",
+    "check": "node --check src/renderSrv.js",
+    "test": "node --test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "private": true,
+  "main": "src/renderSrv.js",
+  "type": "module",
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "jsdom": "^27.2.0",
+    "puppeteer": "^24.31.0"
+  }
+}
