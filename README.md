@@ -15,7 +15,12 @@ Lean, self-hosted HTML renderer that turns any HTTP(S) page into a cleaned SEO s
 - Prereq: Node.js **>= 18.18** (Puppeteer downloads Chromium on first install).
 - Install: `npm install`
 - Configure: `cp .env.example .env` then tweak values (see below).
-- Run: `npm start` (or `npm run dev` for watch mode, `npm run check` for syntax, `npm test` for node's built-in tests if added).
+- Run: 
+   
+  - `npm start` — run server
+  - `npm run dev` — watch mode
+  - `npm run check` — syntax check
+  - `npm test` — run Node's built-in tests
 
 ## Environment
 Defined in `.env` (defaults from `.env.example`):
