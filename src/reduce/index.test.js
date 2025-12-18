@@ -60,7 +60,7 @@ test("removes disallowed attributes and filters class names to product keywords"
   const container = document.querySelector("div#product-1");
   assert.ok(container, "expected product container");
   assert.equal(container.getAttribute("class"), "Product-card");
-  assert.equal(container.getAttribute("data-gseo"), "keep");
+  assert.ok(!container.hasAttribute("data-gseo"));
   assert.ok(!container.hasAttribute("style"));
   assert.ok(!container.hasAttribute("onclick"));
   assert.ok(!container.hasAttribute("data-other"));
@@ -99,6 +99,33 @@ test("collapses div soup and removes empty wrappers", () => {
   const paragraph = flattened.querySelector("p");
   assert.ok(paragraph, "expected paragraph content");
   assert.equal(paragraph.textContent, "Keep me");
+});
+
+test("does not remove meta tags as empty and still cleans empty siblings", () => {
+  const { document } = parseCleanedDocument(
+    `
+      <html>
+        <body>
+          <div id="wrapper">
+            <div></div>
+            <meta itemprop="name" content="Keep me">
+            <div>   </div>
+          </div>
+        </body>
+      </html>
+    `,
+    new URL("https://example.com/products/1")
+  );
+
+  const wrapper = document.querySelector("#wrapper");
+  assert.ok(wrapper, "expected wrapper element");
+
+  const meta = wrapper.querySelector("meta[itemprop='name']");
+  assert.ok(meta, "expected meta tag to be preserved");
+  assert.equal(meta.getAttribute("content"), "Keep me");
+
+  // Empty div siblings should be removed, leaving only meta in wrapper
+  assert.equal(wrapper.querySelectorAll("div").length, 0);
 });
 
 test("adds base and canonical tags when provided a URL", () => {
@@ -184,7 +211,7 @@ test("preserves special characters in attributes and text", () => {
   );
 
   const div = document.querySelector("div");
-  assert.equal(div.getAttribute("data-gseo"), "test&special");
+  assert.ok(!div.hasAttribute("data-gseo"));
   assert.ok(
     div.textContent.includes("$99.99") && div.textContent.includes("©"),
     "expected special characters to be preserved"

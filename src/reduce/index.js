@@ -7,7 +7,7 @@ const ELEMENT_NODE = 1;
 const TEXT_NODE = 3;
 const COMMENT_NODE = 8;
 const STRIP_SELECTOR =
-  'iframe, script:not([type="application/ld+json"]), path, form, link:not([rel="stylesheet"]), noscript, header, footer, nav, svg';
+  'iframe, script:not([type="application/ld+json"]), path, form, link:not([rel="stylesheet"]), noscript, footer, nav, svg';
 const ALLOWED_ATTRIBUTES = new Set([
   "class",
   "content",
@@ -94,8 +94,8 @@ class HtmlCleaner {
         logger.info("Collapse div soup");
         this.collapseDivSoup(document.body);
       }
-      logger.info("Remove non-description meta tags");
-      this.removeNonDescriptionMeta(document);
+      //logger.info("Remove non-description meta tags");
+      //this.removeNonDescriptionMeta(document);
       logger.info("Ensure base tag");
       this.ensureBaseTag(document, parsedURL);
       logger.info("Ensure canonical link");
