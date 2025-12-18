@@ -1,11 +1,12 @@
-import {promises as fs} from "fs";
-import {JSDOM} from "jsdom";
+import { promises as fs } from "fs";
+import { JSDOM } from "jsdom";
 import path from "path";
 import puppeteer from "puppeteer";
-import {serverConfig} from "../config/serverConfig.js";
-import {buildJsonLdScript} from "../ldgen/index.js";
-import {cleanHTML} from "../reduce/index.js";
-import {logger} from "./logger.js";
+import { serverConfig } from "../config/serverConfig.js";
+import { buildJsonLdScript } from "../ldgen/index.js";
+import { parseMicrodata } from "../microdata-parser/index.js"; // Ensure microdata parser is loaded
+import { cleanHTML } from "../reduce/index.js";
+import { logger } from "./logger.js";
 
 const isSnapshotEnabled = parseSnapshotFlag(process.env.SNAPSHOT);
 
@@ -27,7 +28,6 @@ export class PageRenderer {
     try {
       const page = await browser.newPage();
       const parsedUrl = this.parseUrl(url);
-      const timestamp = this.buildTimestampSuffix(new Date());
 
       const customUserAgent = process.env.USER_AGENT?.trim();
       if (customUserAgent) {
@@ -36,19 +36,18 @@ export class PageRenderer {
       }
 
       await page.setRequestInterception(true);
-      page.on('request', request => {
+      page.on("request", (request) => {
         logger.log(`Request ${request.url()}: ${request.resourceType()}`);
         const u = request.url();
-        if ([
-          'font',
-          'stylesheet',
-          'media',
-          'xhr',
-          'websocket',
-          'ping'
-        ].includes(request.resourceType())) {
+        if (
+          ["font", "stylesheet", "media", "xhr", "websocket", "ping"].includes(
+            request.resourceType()
+          )
+        ) {
           request.abort();
-          logger.log(`Request ${request.url()}: ${request.resourceType()} => aborted by type`);
+          logger.log(
+            `Request ${request.url()}: ${request.resourceType()} => aborted by type`
+          );
         } else if (
           u.includes("analytics") ||
           u.includes("gtm") ||
@@ -56,7 +55,9 @@ export class PageRenderer {
           u.includes("hotjar") ||
           u.includes("optimizely")
         ) {
-          logger.log(`Request ${request.url()}: ${request.resourceType()} => aborted analytics`);
+          logger.log(
+            `Request ${request.url()}: ${request.resourceType()} => aborted analytics`
+          );
           request.abort();
         } else {
           logger.log(`Request ${request.url()}:`, request.resourceType());
@@ -81,15 +82,15 @@ export class PageRenderer {
       });
 
       if (isSnapshotEnabled) {
-        await this.persistHtmlSnapshot(content, parsedUrl, timestamp+"_raw");
+        await this.persistHtmlSnapshot(content, parsedUrl, "_raw");
       }
 
       logger.info(`Got content from: ${url}`);
-      const cleanedContent = cleanHTML(content, parsedUrl);
+    const cleanedContent = cleanHTML(content, parsedUrl);
       const htmlWithJsonLd = await this.injectJsonLd(cleanedContent);
 
       if (isSnapshotEnabled) {
-        await this.persistHtmlSnapshot(htmlWithJsonLd, parsedUrl, timestamp + "_cleaned");
+        await this.persistHtmlSnapshot(htmlWithJsonLd, parsedUrl, "_cleaned");
       }
 
       return htmlWithJsonLd;
@@ -100,16 +101,16 @@ export class PageRenderer {
 
   async getFullHTML(page, timeoutMs = serverConfig.fetchHtmlTimeoutMs) {
     const client = await page.target().createCDPSession();
-    const {root} = await this.sendWithTimeout(
+    const { root } = await this.sendWithTimeout(
       client,
       "DOM.getDocument",
-      {depth: -1},
+      { depth: -1 },
       timeoutMs
     );
-    const {outerHTML} = await this.sendWithTimeout(
+    const { outerHTML } = await this.sendWithTimeout(
       client,
       "DOM.getOuterHTML",
-      {nodeId: root.nodeId},
+      { nodeId: root.nodeId },
       timeoutMs
     );
     if (!outerHTML || outerHTML.trim() === "") {
@@ -145,38 +146,42 @@ export class PageRenderer {
     timeout = serverConfig.stablePageTimeoutMs,
     maxWait = serverConfig.timeoutMs
   ) {
-    await page.evaluate((timeout, maxWait) => {
-      return new Promise((resolve, reject) => {
-        let mutationTimeout;
-        let maxTimeout = setTimeout(() => {
-          observer.disconnect();
-          reject(new Error('exceeded max wait time for DOM stability'));
-        }, maxWait);
-
-        const observer = new MutationObserver(() => {
-          clearTimeout(mutationTimeout);
-          mutationTimeout = setTimeout(() => {
-            clearTimeout(maxTimeout);
+    await page.evaluate(
+      (timeout, maxWait) => {
+        return new Promise((resolve, reject) => {
+          let mutationTimeout;
+          let maxTimeout = setTimeout(() => {
             observer.disconnect();
-            resolve();
-          }, timeout);
-        });
+            reject(new Error("exceeded max wait time for DOM stability"));
+          }, maxWait);
 
-        const startObserving = () => {
-          observer.observe(document.body, {
-            childList: true,
-            subtree: true,
-            attributes: true
+          const observer = new MutationObserver(() => {
+            clearTimeout(mutationTimeout);
+            mutationTimeout = setTimeout(() => {
+              clearTimeout(maxTimeout);
+              observer.disconnect();
+              resolve();
+            }, timeout);
           });
-        };
 
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', startObserving);
-        } else {
-          startObserving();
-        }
-      });
-    }, timeout, maxWait);
+          const startObserving = () => {
+            observer.observe(document.body, {
+              childList: true,
+              subtree: true,
+              attributes: true,
+            });
+          };
+
+          if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", startObserving);
+          } else {
+            startObserving();
+          }
+        });
+      },
+      timeout,
+      maxWait
+    );
   }
 
   parseUrl(rawUrl) {
@@ -205,17 +210,15 @@ export class PageRenderer {
 
     try {
       logger.log(`Writing HTML snapshot to ${filePath}`);
-      const dirStats = await fs
-        .stat(targetDir)
-        .catch(async (error) => {
-          if (error?.code === "ENOENT") {
-            return undefined;
-          }
-          throw error;
-        });
+      const dirStats = await fs.stat(targetDir).catch(async (error) => {
+        if (error?.code === "ENOENT") {
+          return undefined;
+        }
+        throw error;
+      });
 
       if (!dirStats) {
-        await fs.mkdir(targetDir, {recursive: true});
+        await fs.mkdir(targetDir, { recursive: true });
       }
       await fs.writeFile(filePath, html, "utf-8");
     } catch (error) {
@@ -253,8 +256,13 @@ export class PageRenderer {
 
   async injectJsonLd(html) {
     try {
+      if (typeof html !== "string" || html.trim() === "") {
+        return html;
+      }
+      const microdata = await parseMicrodata(html);
+
       const dom = new JSDOM(html);
-      const {document} = dom.window;
+      const { document } = dom.window;
 
       if (!document) {
         return html;
@@ -272,7 +280,14 @@ export class PageRenderer {
 
       const script = document.createElement("script");
       script.setAttribute("type", "application/ld+json");
-      script.textContent = buildJsonLdScript(html);
+      let jsonLdContent = "";
+      // if microdata is not empty
+      if (Object.keys(microdata).length !== 0) {
+        jsonLdContent = JSON.stringify(microdata, null, 2);
+      } else {
+        jsonLdContent = buildJsonLdScript(html);
+      }
+      script.textContent = jsonLdContent;
       head.appendChild(script);
 
       return dom.serialize();
@@ -286,11 +301,12 @@ export class PageRenderer {
   logInflight(reason) {
     const now = Date.now();
     console.log(
-      `[${((now - this.start) / 1000).toFixed(2)}s] inflight=${this.inflight} (${reason})`
+      `[${((now - this.start) / 1000).toFixed(2)}s] inflight=${
+        this.inflight
+      } (${reason})`
     );
     this.lastChange = now;
   }
-
 }
 
 function parseSnapshotFlag(value) {
@@ -314,5 +330,5 @@ function parseSnapshotFlag(value) {
  * Simple timeout helper to avoid relying on Puppeteer wait helpers across versions.
  */
 function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
