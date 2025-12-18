@@ -10,7 +10,8 @@ const STRIP_SELECTOR =
   'iframe, script, path, form, link:not([rel="stylesheet"]), noscript, header, footer, nav, svg';
 const ALLOWED_ATTRIBUTES = new Set([
   "class",
-  "data-gseo",
+  "content",
+  "name",
   "id",
   "href",
   "src",
