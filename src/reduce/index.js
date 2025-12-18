@@ -46,7 +46,6 @@ const VOID_ELEMENTS = new Set([
   "img",
   "input",
   "link",
-  "meta",
   "param",
   "source",
   "track",
@@ -172,7 +171,10 @@ class HtmlCleaner {
   }
 
   removeEmptyElements(element, allowRemoval = true) {
-    
+    if (element.tagName?.toLowerCase() === "meta") {
+      return;
+    }
+
     if (this.containsVoidElements(element)) {
       return;
     }

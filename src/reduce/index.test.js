@@ -35,10 +35,14 @@ test("removes comments and disallowed tags while keeping description meta", () =
   );
 
   assert.equal(document.querySelectorAll("script, style").length, 0);
-  assert.equal(document.querySelectorAll("meta").length, 1);
-  assert.equal(
-    document.querySelector("meta")?.getAttribute("name"),
-    "description"
+  assert.equal(document.querySelectorAll("meta").length, 2);
+  assert.ok(
+    Boolean(document.querySelector('meta[name="description"]')),
+    "expected description meta to be preserved"
+  );
+  assert.ok(
+    Boolean(document.querySelector('meta[name="keywords"]')),
+    "expected keywords meta to be preserved"
   );
   assert.ok(!cleaned.includes("<!-- noisy comment -->"));
 });
