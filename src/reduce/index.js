@@ -93,8 +93,6 @@ class HtmlCleaner {
         logger.info("Collapse div soup");
         this.collapseDivSoup(document.body);
       }
-      //logger.info("Remove non-description meta tags");
-      //this.removeNonDescriptionMeta(document);
       logger.info("Ensure base tag");
       this.ensureBaseTag(document, parsedURL);
       logger.info("Ensure canonical link");
@@ -122,15 +120,6 @@ class HtmlCleaner {
     document
       .querySelectorAll('link[rel="stylesheet"], style')
       .forEach((element) => element.remove());
-  }
-
-  removeNonDescriptionMeta(document) {
-    document.querySelectorAll("meta").forEach((element) => {
-      const nameValue = element.getAttribute("name");
-      if (!nameValue || !nameValue.toLowerCase().includes("description")) {
-        element.remove();
-      }
-    });
   }
 
   removeDisallowedAttributesFromBody(document) {
