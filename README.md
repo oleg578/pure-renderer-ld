@@ -7,7 +7,7 @@ Lean, self-hosted HTML renderer that turns any HTTP(S) page into a cleaned SEO s
 - Filters non-essential requests (fonts, stylesheets, media, xhr/ws/ping, common analytics/AB scripts) for repeatable renders.
 - Waits for DOM stability via `MutationObserver`, then pulls markup directly with CDP `DOM.getOuterHTML` to avoid Puppeteer timing quirks.
 - Cleans markup: strips scripts/styles/forms/nav/svg/etc., keeps only safe attributes, collapses empty div soup, normalizes whitespace, and enforces `<base>` + canonical link.
-- Builds a JSON-LD graph (Organization, WebSite, derived WebPage type) from existing meta tags and canonical URLs.
+- Builds or preserves structured data: if the page exposes Microdata, it is parsed into JSON-LD; otherwise builds an Organization/WebSite/WebPage graph from meta tags and canonical URLs.
 - Tracks in-flight work in a file-backed flag (`tmp/process`) surfaced at **GET /progress**.
 - Supports a custom **USER_AGENT** for pages that gate content; sanitizes snapshot filenames when snapshotting is wired in.
 
@@ -47,7 +47,7 @@ Defined in `.env` (defaults from `.env.example`):
 - Clean HTML (`src/reduce/index.js`): optionally strip CSS tags when `STRIP_CSS=true`, remove disallowed tags/attrs, keep
 meaningful classes, drop non-description meta tags, ensure `<base>` and canonical, collapse empty wrappers, normalize whitespace and
 nbsp.
-- Generate JSON-LD (`src/ldgen/jsonLdBuilder.js`): Organization + WebSite + heuristically typed WebPage (ItemPage, CollectionPage, SearchResultsPage, etc.) based on existing meta and path heuristics; injects into `<head>`.
+- Generate JSON-LD (`src/services/pageRenderer.js`): convert existing Microdata to JSON-LD when present via the built-in parser; otherwise synthesize Organization + WebSite + heuristically typed WebPage (ItemPage, CollectionPage, SearchResultsPage, etc.) and inject into `<head>`.
 
 ## Logging & Debugging
 - Logger (`src/services/logger.js`) writes `[ISO][LEVEL]` entries to `LOG_DIR/LOG_FILE`; falls back to console on write failures.
