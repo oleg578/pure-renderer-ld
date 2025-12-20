@@ -1,60 +1,54 @@
 # PureRenderer-LD
 
-Lean, self-hosted HTML renderer that turns any HTTP(S) page into a cleaned SEO snapshot with injected JSON-LD. Built on Puppeteer and Express as a drop-in alternative to prerender.io / Rendertron.
+Self-hosted SEO prerenderer that turns any URL into a lean HTML snapshot with first-party JSON-LD—keep your crawl equity, lose the third-party bill.
 
-## What It Does
-- **GET /render?url=…** returns minimized HTML with JSON-LD; errors come back as `{ "error": "…" }`.
-- Filters non-essential requests (fonts, stylesheets, media, xhr/ws/ping, common analytics/AB scripts) for repeatable renders.
-- Waits for DOM stability via `MutationObserver`, then pulls markup directly with CDP `DOM.getOuterHTML` to avoid Puppeteer timing quirks.
-- Cleans markup: strips scripts/styles/forms/nav/svg/etc., keeps only safe attributes, collapses empty div soup, normalizes whitespace, and enforces `<base>` + canonical link.
-- Builds or preserves structured data: if the page exposes Microdata, it is parsed into JSON-LD; otherwise builds an Organization/WebSite/WebPage graph from meta tags and canonical URLs.
-- Tracks in-flight work in a file-backed flag (`tmp/process`) surfaced at **GET /progress**.
-- Supports a custom **USER_AGENT** for pages that gate content; sanitizes snapshot filenames when snapshotting is wired in.
+## Why teams pick it
+- Ship SEO-ready pages without surrendering traffic or data to hosted proxies.
+- Consistent, lightweight snapshots crawlers love: scripts stripped, metadata normalized, JSON-LD injected.
+- Deterministic renders: throttled network, blocked noise (analytics/AB), DOM stability wait, CDP outerHTML pull.
+- Ops-friendly: single Node service, file-backed progress flag, optional snapshots for postmortems.
 
-## Quick Start
-- Prereq: Node.js **>= 18.18** (Puppeteer downloads Chromium on first install).
+## Who it fits
+- Product teams replacing prerender.io / Rendertron with something they own.
+- Agencies that need reliable, repeatable captures for large catalogs.
+- Growth/SEO engineers who want structured data generated even when sites only expose Microdata.
+
+## 5‑minute start
+- Prereq: Node.js **>= 18.18** (Puppeteer fetches Chromium on first install).
 - Install: `npm install`
-- Configure: `cp .env.example .env` then tweak values (see below).
-- Run: 
-   
-  - `npm start` — run server
-  - `npm run dev` — watch mode
-  - `npm run check` — syntax check
-  - `npm test` — run Node's built-in tests
+- Configure: `cp .env.example .env` and tune the knobs below.
+- Run: `npm start` (prod) or `npm run dev` (watch). Checks: `npm run check`. Tests: `npm test` when present.
 
-## Environment
-Defined in `.env` (defaults from `.env.example`):
-- `SERVER_HOST` / `SERVER_PORT` — bind address and port (default `127.0.0.1:51000`).
-- `SERVER_TIMEOUT_MS` — overall request timeout; also used as max DOM-stability wait (default `60000`).
-- `FETCH_HTML_TIMEOUT` — CDP outerHTML fetch timeout in ms (default `1000`).
-- `STABLE_PAGE_TIMEOUT` — quiet period (ms) with no DOM mutations before snapshot (default `500`).
+## Configuration (env)
+- `SERVER_HOST` / `SERVER_PORT` — bind address (default `127.0.0.1:51000`).
+- `SERVER_TIMEOUT_MS` — global timeout and max DOM-stability wait (default `60000`).
+- `FETCH_HTML_TIMEOUT` — CDP outerHTML fetch timeout (default `1000`).
+- `STABLE_PAGE_TIMEOUT` — quiet window for the MutationObserver (default `500`).
 - `TMP_DIR` — progress flag directory (default `./tmp`).
-- `LOG_DIR`, `LOG_FILE`, `LOG_LEVEL` — log destination and enabled levels (`log`, `info`, `warn`, `error`; inline `//` comments are ignored).
-- `USER_AGENT` — optional custom UA applied to page requests; omit to use Puppeteer's default.
-- `SNAPSHOT` — toggles snapshot helper if you wire `PageRenderer.persistHtmlSnapshot` into the flow; filenames are URL-safe and truncated to 120 chars.
-- `STRIP_CSS` — when `true`, remove `<link rel="stylesheet">` and `<style>` during cleaning; when `false`, keep them.
+- `LOG_DIR`, `LOG_FILE`, `LOG_LEVEL` — destination + levels (`log`, `info`, `warn`, `error`; `//` comments ignored).
+- `USER_AGENT` — spoof when targets gate content.
+- `SNAPSHOT` — enable sanitized on-disk snapshots via `PageRenderer.persistHtmlSnapshot`.
+- `STRIP_CSS` — `true` to drop stylesheets/styles in cleaning, `false` to keep.
 
 ## API
-- **GET /render?url=ENCODED_HTTP_URL** → `text/html`
-  - Validates the `url` is HTTP/HTTPS. Returns cleaned HTML with injected JSON-LD.
-  - Failures return HTTP 4xx/5xx with JSON body `{ "error": "message" }`.
-- **GET /progress** → `{ "progress": 0 | 1 }`
-  - Reflects whether a render is running (file-backed flag reset even on errors).
+- `GET /render?url=ENCODED_HTTP_URL` → `text/html`
+  - Validates HTTP/HTTPS. Returns cleaned HTML with injected JSON-LD.
+  - Errors come back as `{ "error": "message" }` with 4xx/5xx.
+- `GET /progress` → `{ "progress": 0 | 1 }`
+  - Reflects an in-flight render (file-backed flag reset even on errors).
 
-## Rendering Pipeline
-- Launch headless Chromium with `--no-sandbox` and intercept requests to drop heavy/analytics resources.
-- Await DOM stability (`MutationObserver` + quiet timer) within the global timeout, then pull the full document via CDP.
-- Clean HTML (`src/reduce/index.js`): optionally strip CSS tags when `STRIP_CSS=true`, remove disallowed tags/attrs, keep
-meaningful classes, drop non-description meta tags, ensure `<base>` and canonical, collapse empty wrappers, normalize whitespace and
-nbsp.
-- Generate JSON-LD (`src/services/pageRenderer.js`): convert existing Microdata to JSON-LD when present via the built-in parser; otherwise synthesize Organization + WebSite + heuristically typed WebPage (ItemPage, CollectionPage, SearchResultsPage, etc.) and inject into `<head>`.
+## How it wins
+- Launches headless Chromium (`--no-sandbox`), blocks heavy/analytics requests for fast, stable output.
+- Waits for DOM stability (MutationObserver + quiet timer), then grabs the document via CDP `DOM.getOuterHTML` to dodge Puppeteer timing quirks.
+- Cleans HTML (`src/reduce/index.js`): optional CSS stripping, removes unsafe tags/attrs, keeps meaningful classes, enforces `<base>` + canonical, collapses empty wrappers, reduce "div soup".
+- Generates JSON-LD (`src/services/pageRenderer.js`): upgrades Microdata when present; otherwise synthesizes Organization + WebSite + typed WebPage (ItemPage, CollectionPage, SearchResultsPage, etc.) and injects into `<head>`.
 
-## Logging & Debugging
-- Logger (`src/services/logger.js`) writes `[ISO][LEVEL]` entries to `LOG_DIR/LOG_FILE`; falls back to console on write failures.
+## Observability
+- Logger (`src/services/logger.js`) writes `[ISO][LEVEL]` to `LOG_DIR/LOG_FILE`, falling back to console if the file system fails.
 - Include `log` in `LOG_LEVEL` to trace every intercepted request.
-- Snapshot helper (`PageRenderer.persistHtmlSnapshot`) is available for wiring when `SNAPSHOT=true`; filenames are sanitized from hostname/path and saved under `LOG_DIR`.
+- Optional snapshots (when `SNAPSHOT=true`) save sanitized filenames under `LOG_DIR` for audit/debug.
 
-## Development
-- Entrypoint: `src/server.js`, Express app in `src/app.js`, routes in `src/routes/renderRoute.js`.
-- Progress tracking: `src/utils/processTracker.js` (file `tmp/process`).
-- Node ESM; lint via `npm run check`; tests via `npm test` when present.
+## Dev map
+- Entrypoint `src/server.js`; Express app `src/app.js`; routes `src/routes/renderRoute.js`.
+- Progress tracking lives in `src/utils/processTracker.js` (file `tmp/process`).
+- Node ESM; lint with `npm run check`; run tests with `npm test` when present.
